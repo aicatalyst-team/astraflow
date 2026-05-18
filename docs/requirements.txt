@@ -1,5 +1,5 @@
 sphinx
-sphinx-book-theme
+shibuya
 myst-parser
 nbsphinx
 sphinx-copybutton

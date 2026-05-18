@@ -35,15 +35,11 @@ language = os.environ.get("PROJECT_DOC_LANG", "en")
 exclude_patterns = ["_build", "build", "Thumbs.db", ".DS_Store"]
 templates_path = ["_templates"]
 
-html_theme = "sphinx_book_theme"
+html_theme = "shibuya"
 html_static_path = ["_static"]
-# TODO: restore image logo once _static/logo.jpg is fixed.
-html_theme_options = {
-    "logo": {
-        "text": "AstraFlow",
-    },
-    "max_navbar_depth": 1,
-}
+# Shibuya shows `project` ("AstraFlow") as the header brand text automatically.
+# TODO: restore image logo once _static/logo.jpg is fixed (theme_options light_logo/dark_logo).
+html_theme_options = {"accent_color": "violet"}
 html_css_files = ["css/custom.css"]
 
 # Notebook policy: render notebooks but do not execute during docs build.

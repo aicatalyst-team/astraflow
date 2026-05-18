@@ -6,12 +6,6 @@ on distributed GPU clusters.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Overview
-
-   overview
-
-.. toctree::
-   :maxdepth: 1
    :caption: Get Started
 
    get-started/installation
