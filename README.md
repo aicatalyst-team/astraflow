@@ -11,20 +11,7 @@
 
 </div>
 
-<!-- <p align="center">
-<a href="https://arxiv.org/abs/2605.15565"><b>Paper</b></a> |
-<a href="https://haizhongzheng.github.io/astraflow/"><b>Website</b></a> |
-<a href="https://haizhongzheng.github.io/astraflow/docs/"><b>Documentation</b></a> |
-<a href="./docs/en/recipes/"><b>Recipes</b></a> |
-<a href="#citation"><b>Citation</b></a>
-</p> -->
-
-<div align="center">
-<img src="./docs/assets/raas.gif" width="90%" alt="Elastic RaaS pool of mixed-hardware nodes joining and leaving across regions">
-</div>
-
-<!-- <p align="center"><i>AstraFlow natively elastic, heterogeneous, and cross-region rollout with its RaaS (Rollout as a Service) abstraction</i></p> -->
-
+<hr>
 
 AstraFlow is a **dataflow-oriented** reinforcement learning system designed for better flexibility and scalability.
 
@@ -35,17 +22,31 @@ AstraFlow **natively** supports the following for LLM RL training without any fe
 - **Substitutable rollout and trainer service**
 - **Composable data algorithms**
 
+
+<!-- ## What can AstraFlow enable? -->
+
+<div align="center">
+<img src="./docs/assets/raas.gif" width="90%" alt="Elastic RaaS pool of mixed-hardware nodes joining and leaving across regions">
+</div>
+
+<p align="center"><i>Elastic Heterogeneous Cross-region Rollouts</i></p>
+
+<!-- <p align="center"><i>AstraFlow natively elastic, heterogeneous, and cross-region rollout with its RaaS (Rollout as a Service) abstraction</i></p> -->
+
 <!-- **AstraFlow**’s clean rollout and trainer abstractions make both components fully **substitutable** with independent code base, allowing users to plug in custom rollout services or training backends as long as they implement the corresponding interfaces. -->
+
 
 
 <div align="center">
 <img src="./docs/assets/astraflow.gif" width="90%" alt="AstraFlow training a multi-policy workflow on an elastic, heterogeneous, cross-region rollout pool">
 </div>
 
+<p align="center"><i>Multi-policy Collaborative RL Training</i></p>
+
 <!-- <p align="center"><i>AstraFlow training a multi-policy workflow on an elastic, heterogeneous, cross-region rollout pool — all at once, with no feature-specific code.</i></p> -->
 
 ## News
-- **[2026/05]** AstraFlow **v0.1.0** released — first public release of the full system.
+- **[2026/05]** AstraFlow **v0.1.0** released — first public release of the full system. See the [project website](https://haizhongzheng.github.io/astraflow/).
 - **[2026/05]** AstraFlow paper is on arXiv — [Dataflow-Oriented Reinforcement Learning for Agentic LLMs](https://arxiv.org/abs/2605.15565).
 
 ----
