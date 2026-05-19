@@ -15,7 +15,7 @@
 
 AstraFlow is a **dataflow-oriented** reinforcement learning system designed for better flexibility and scalability.
 
-AstraFlow **natively** supports the following for LLM RL training without any feature-specific system engineering:
+AstraFlow **natively** supports the following for LLM RL training **without any feature-specific system engineering**:
 
 - **Fully Async Multi-policy collaborative RL**
 - **Elastic heterogeneous cross-region rollouts**

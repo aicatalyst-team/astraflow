@@ -4,8 +4,6 @@
 
 - Linux (Ubuntu 20.04+ recommended)
 - NVIDIA GPU with CUDA support
-- Conda (Miniconda or Anaconda)
-- Python 3.10, 3.11, or 3.12
 
 ## Option A: Custom Installation (Conda)
 
