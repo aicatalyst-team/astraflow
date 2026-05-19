@@ -79,10 +79,27 @@
   .subtitle {
     color: var(--ink-soft);
     font-size: clamp(18px, 2vw, 22px);
-    margin: 0 0 36px;
+    margin: 0 0 16px;
     font-weight: 400;
     max-width: 860px;
     line-height: 1.4;
+  }
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0 0 34px;
+  }
+  .kw {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 4px;
+    padding: 4px 10px;
   }
 
   .authors {
@@ -204,17 +221,16 @@
     font-size: 30px;
     font-weight: 600;
     letter-spacing: -0.015em;
+    line-height: 1.25;
     margin: 0 0 4px;
     color: var(--ink);
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
   }
   section h2 .glyph {
     color: var(--accent);
     font-family: 'IBM Plex Mono', monospace;
     font-weight: 500;
     font-size: 24px;
+    margin-right: 10px;
   }
   section .rule {
     height: 1px;
@@ -242,6 +258,11 @@
     width: 48px;
     height: 3px;
     background: var(--accent);
+  }
+  section h3 .h3-num {
+    color: var(--accent);
+    margin-right: 8px;
+    font-variant-numeric: tabular-nums;
   }
   section h4 {
     font-family: 'IBM Plex Mono', monospace;
@@ -382,6 +403,97 @@
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.04em;
+  }
+
+  /* NATIVE SUPPORT — open-source capability list */
+  .native-list {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .native-list li {
+    position: relative;
+    padding-left: 26px;
+    color: var(--ink-soft);
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+  .native-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+  .native-list li b { color: var(--ink); font-weight: 600; }
+
+  /* OPEN-SOURCE CTA — refined panel, matches .capabilities */
+  .oss-cta {
+    margin: 30px 0 0;
+    padding: 22px 26px 24px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-left: 3px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 18px 28px;
+  }
+  .oss-cta-tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent-strong);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 9px;
+  }
+  .oss-cta-text {
+    margin: 0;
+    color: var(--ink);
+    font-size: 16.5px;
+    font-weight: 500;
+    line-height: 1.5;
+    max-width: 430px;
+  }
+  .oss-cta-text em {
+    color: var(--accent-strong);
+    font-style: normal;
+    font-weight: 600;
+  }
+  .oss-cta-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .oss-cta .btn-star {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff !important;
+  }
+  .oss-cta .btn-star:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    color: #fff !important;
+    transform: translateY(-2px);
+  }
+  .oss-cta .btn-doc {
+    background: var(--bg);
+    border-color: var(--accent-line);
+    color: var(--accent-strong) !important;
+  }
+  .oss-cta .btn-doc:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff !important;
+    transform: translateY(-2px);
+  }
+  @media (max-width: 560px) {
+    .oss-cta { flex-direction: column; align-items: flex-start; }
   }
 
   /* POINTER — "more in the paper" */
@@ -676,6 +788,16 @@
     <h1 class="title">AstraFlow</h1>
     <p class="subtitle">Dataflow-Oriented Reinforcement Learning for (Multi-)Agentic LLMs</p>
 
+    <div class="keywords">
+      <span class="kw">Agentic RL</span>
+      <span class="kw">Multi-Agent RL</span>
+      <span class="kw">Asynchronous</span>
+      <span class="kw">Elastic</span>
+      <span class="kw">Cross-Region</span>
+      <span class="kw">Heterogeneous</span>
+      <span class="kw">Composable Data Algorithms</span>
+    </div>
+
     <div class="authors">
       <span class="author">Haizhong Zheng<sup>1</sup></span><span class="sep">·</span>
       <span class="author">Yizhuo Di<sup>1</sup></span><span class="sep">·</span>
@@ -751,14 +873,43 @@
 </section>
 
 <!-- WHY THIS IS HARD TODAY — single callout, replaces "The problem" section -->
+<!-- WHAT ASTRAFLOW SUPPORTS NATIVELY — open-source pitch -->
+<section style="padding-top: 0;">
+  <div class="container">
+    <h2><span class="glyph">§</span>What AstraFlow supports out of the box</h2>
+    <div class="rule"></div>
+    <p>
+      AstraFlow is an open-source, <b>dataflow-oriented</b> reinforcement learning system built for flexibility and scale. It <b>natively</b> supports the following for LLM RL training — <b>without any feature-specific system engineering</b>:
+    </p>
+    <ul class="native-list">
+      <li><b>Fully-async multi-policy collaborative RL</b></li>
+      <li><b>Elastic heterogeneous cross-region rollouts</b></li>
+      <li><b>Substitutable rollout and trainer service</b></li>
+      <li><b>Composable data algorithms</b></li>
+    </ul>
+    <div class="oss-cta">
+      <div class="oss-cta-body">
+        <span class="oss-cta-tag">Open source · Apache 2.0</span>
+        <p class="oss-cta-text">Build your own agentic workflow for RL training on <em>AstraFlow</em>.</p>
+      </div>
+      <div class="oss-cta-actions">
+        <a class="btn btn-star" href="https://github.com/Infini-AI-Lab/astraflow">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.1c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.25 1.91-.38 2.89-.39.98 0 1.97.13 2.89.39 2.21-1.49 3.18-1.18 3.18-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.68.41.35.78 1.04.78 2.1v3.11c0 .3.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+          Star on GitHub
+        </a>
+        <a class="btn btn-doc" href="https://Infini-AI-Lab.github.io/astraflow/docs/get-started/installation.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+          Quick Start
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="alt">
   <div class="container">
     <h2><span class="glyph">§</span>What Existing RL Systems Lack</h2>
     <div class="rule"></div>
-
-    <p>
-      LLMs are moving from standalone use into complex agentic systems — coding agents, search agents, multi-agent workflows. RL is the key technique for improving them, but scaling RL to agentic LLMs is hard. The workloads are complex (dynamic execution, multi-policy coordination), and the underlying compute is diverse (elastic, heterogeneous, distributed). Existing systems can be made to do <em>parts</em> of this, but each part is a separate patch on the same rigid pipeline.
-    </p>
 
     <div class="callout">
       <div class="row">
@@ -791,16 +942,12 @@
     </div>
     <div class="caption">
       <span class="label">Figure 2 · The three abstractions in action</span>
-      AstraFlow training a multi-policy workflow on an elastic, heterogeneous, cross-region rollout pool: <b>All at once, with no feature-specific code</b>. Three components (dataflow layer, RaaS pool, trainer pool) each run their own control loop and interact only through data and weight interfaces. Multi-policy, elasticity, and cross-region rollout are not bolted on, they fall out of the architecture.
+      AstraFlow's design principle is <em>dataflow-oriented coordination</em>. Disaggregation does not only separate rollout and training <em>computation</em>; it also separates their <em>control responsibilities</em>. Rollout services, trainers, and the dataflow layer each run autonomous control loops and interact only through minimal data and weight interfaces. Capabilities like multi-policy collaborative training, elastic rollout pools, heterogeneous and cross-region rollouts, and modular data algorithms are then expressed by the architecture itself, not bolted on.
     </div>
   </div>
 
   <div class="container">
-    <p>
-      AstraFlow's design principle is <em>dataflow-oriented coordination</em>. Disaggregation does not only separate rollout and training <em>computation</em>; it also separates their <em>control responsibilities</em>. Rollout services, trainers, and the dataflow layer each run autonomous control loops and interact only through minimal data and weight interfaces. Capabilities like multi-policy collaborative training, elastic rollout pools, heterogeneous and cross-region rollouts, and modular data algorithms are then expressed by the architecture itself, not bolted on.
-    </p>
-
-    <h3>Dataflow Abstraction: Data algorithms become plug-ins</h3>
+    <h3><span class="h3-num">1.</span>Dataflow Abstraction: Data algorithms become plug-ins</h3>
 
     <figure class="paper-fig">
       <img src="figs/dataflow-component.svg" alt="Dataflow layer abstraction" style="max-width: 560px;">
@@ -814,7 +961,7 @@
       The layer also <em>regulates</em> autonomous components: throttling slow rollouts, prioritizing fresher trajectories, blocking unsuitable batches via backpressure. In multi-policy training, trajectory metadata (producing policy, model version, timestamp, reward, task type) lets the layer route policy-specific / shared / mixed streams to different trainers — no direct trainer-to-trainer coordination.
     </p>
 
-    <h3>RaaS Abstraction: Rollout becomes a service contract</h3>
+    <h3><span class="h3-num">2.</span>RaaS Abstraction: Rollout becomes a service contract</h3>
 
     <figure class="paper-fig wrap-right lg">
       <img src="figs/raas-abstraction.svg" alt="RaaS abstraction">
@@ -828,7 +975,7 @@
       RaaS also makes capacity <b>elastic</b>. Adding capacity is just launching more nodes connected to the same dataflow and weight interfaces; removing nodes, slow workers, or failures only affect the rate trajectories arrive, not the trainer loop. Heterogeneous and cross-region settings — where rollout services have different latency, throughput, bandwidth — fall out of the same contract.
     </p>
 
-    <h3>Trainer Abstraction: Training backends become substitutable</h3>
+    <h3><span class="h3-num">3.</span>Trainer Abstraction: Training backends become substitutable</h3>
 
     <div class="fig-row cols-2">
       <figure>
@@ -993,6 +1140,7 @@
       </p>
     </div>
 
+    <!-- HIDDEN: auto-scaling results table
     <div class="table-wrap">
       <table class="paper">
         <caption>Auto-scaling vs. fixed pools on Qwen3-14B math. Comparable accuracy and wall-clock to the over-allocated baseline, with 13% lower total GPU-hours.</caption>
@@ -1038,6 +1186,7 @@
         </tbody>
       </table>
     </div>
+    -->
 
     <!-- Finding 3 -->
     <h3 id="finding-cross-region">Cross-region & Heterogeneous: Trainer never blocks on a slow remote pool</h3>
