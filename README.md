@@ -1,7 +1,7 @@
 <div align="center" id="astraflowtop">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/title-dark.svg">
-  <img src="./docs/assets/title-light.svg" alt="AstraFlow — Dataflow-Oriented Reinforcement Learning for Agentic LLMs" width="620">
+  <img src="./docs/assets/title-light.svg" alt="AstraFlow — Dataflow-Oriented Reinforcement Learning for (Multi-)Agentic LLMs" width="620">
 </picture>
 
 [![arXiv](https://img.shields.io/badge/arXiv-2605.15565-b31b1b.svg)](https://arxiv.org/abs/2605.15565)
@@ -22,6 +22,7 @@ AstraFlow **natively** supports the following for LLM RL training without any fe
 - **Substitutable rollout and trainer service**
 - **Composable data algorithms**
 
+<br>
 
 <!-- ## What can AstraFlow enable? -->
 
@@ -29,19 +30,15 @@ AstraFlow **natively** supports the following for LLM RL training without any fe
 <img src="./docs/assets/raas.gif" width="90%" alt="Elastic RaaS pool of mixed-hardware nodes joining and leaving across regions">
 </div>
 
-<p align="center"><i>Elastic Heterogeneous Cross-region Rollouts</i></p>
+<p align="center"><i><b>Elastic Heterogeneous Cross-region Rollouts</b>: RaaS instances on mixed hardware and across regions join and leave the rollout pool on demand, with no scheduler- or region-specific code.</i></p>
 
-<!-- <p align="center"><i>AstraFlow natively elastic, heterogeneous, and cross-region rollout with its RaaS (Rollout as a Service) abstraction</i></p> -->
-
-<!-- **AstraFlow**’s clean rollout and trainer abstractions make both components fully **substitutable** with independent code base, allowing users to plug in custom rollout services or training backends as long as they implement the corresponding interfaces. -->
-
-
+<br>
 
 <div align="center">
 <img src="./docs/assets/astraflow.gif" width="90%" alt="AstraFlow training a multi-policy workflow on an elastic, heterogeneous, cross-region rollout pool">
 </div>
 
-<p align="center"><i>Multi-policy Collaborative RL Training</i></p>
+<p align="center"><i><b>Fully Async Multi-policy Collaborative RL Training</b>: multiple policies train together, each as an independent trainer with its own data and weight stream.</i></p>
 
 <!-- <p align="center"><i>AstraFlow training a multi-policy workflow on an elastic, heterogeneous, cross-region rollout pool — all at once, with no feature-specific code.</i></p> -->
 
@@ -57,18 +54,18 @@ AstraFlow **natively** supports the following for LLM RL training without any fe
 - [Quick Start](docs/en/get-started/quickstart.md)
 
 ## Recipes
-Runnable recipes live under `examples/`. Each recipe ships a `yaml/` directory of configs and numbered launch scripts under `scripts/`. Most recipes default to one 8×H100 node; the `math/` folder also includes 2×H100 recipes for smaller setups.
+AstraFlow currently supports the following recipes. Check the [documentation](https://haizhongzheng.github.io/astraflow/docs/) for more detailed instructions.
 
-| Recipe | Description | Docs |
-|---|---|---|
-| [`math/`](examples/math/) | RLVR math reasoning — Qwen3-1.7B / 8B, M2PO, full and delta-weight transfer | [math](https://haizhongzheng.github.io/astraflow/docs/recipes/math.html) |
-| [`math-multi-agent/`](examples/math-multi-agent/) | Actor + verifier collaborative math training | [multi-agent](https://haizhongzheng.github.io/astraflow/docs/recipes/multi-agent.html) |
-| [`math-efficient-data/`](examples/math-efficient-data/) | Composable data algorithms — GRESO, dynamic sampling, buffer replay | [math](https://haizhongzheng.github.io/astraflow/docs/recipes/math.html) |
-| [`code/`](examples/code/) | Code-generation RL — Qwen3-8B, M2PO | [code](https://haizhongzheng.github.io/astraflow/docs/recipes/code.html) |
-| [`code-multi-agent/`](examples/code-multi-agent/) | Codegen + verifier competitive coding | [code](https://haizhongzheng.github.io/astraflow/docs/recipes/code.html) |
-| [`search/`](examples/search/) | Search-augmented agent training with local retrieval | [search](https://haizhongzheng.github.io/astraflow/docs/recipes/search.html) |
-| [`alfworld/`](examples/alfworld/) | ALFWorld embodied household agent | [agentbench](https://haizhongzheng.github.io/astraflow/docs/recipes/agentbench.html) |
-| [`webshop/`](examples/webshop/) | WebShop web-navigation shopping agent | [agentbench](https://haizhongzheng.github.io/astraflow/docs/recipes/agentbench.html) |
+| Recipe | Description |
+|---|---|
+| [`math/`](examples/math/) | RLVR math reasoning — Qwen3-1.7B / 8B, M2PO, full and delta-weight transfer |
+| [`math-multi-agent/`](examples/math-multi-agent/) | Actor + verifier collaborative math training |
+| [`math-efficient-data/`](examples/math-efficient-data/) | Composable data algorithms — GRESO, dynamic sampling, buffer replay |
+| [`code/`](examples/code/) | Code-generation RL — Qwen3-8B, M2PO |
+| [`code-multi-agent/`](examples/code-multi-agent/) | Codegen + verifier competitive coding |
+| [`search/`](examples/search/) | Search-augmented agent training with local retrieval |
+| [`alfworld/`](examples/alfworld/) | ALFWorld embodied household agent |
+| [`webshop/`](examples/webshop/) | WebShop web-navigation shopping agent |
 
 ## Roadmap
 Near-term focus:
