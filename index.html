@@ -1208,7 +1208,7 @@
     </div>
 
     <!-- Finding 4 -->
-    <h3 id="finding-sparsity">Sparsity makes remote training feasible: Full-sync 28 GB collapses to ~1.5 GB</h3>
+    <h3 id="finding-sparsity">Sparsity makes remote training feasible: Full-sync 28 GB drops to ~1.5 GB</h3>
     <figure class="paper-fig wrap-right">
       <img src="figs/weight_transfer_sparsity_bar.svg" alt="Weight delta sparsity">
       <figcaption>Per-iteration weight delta sparsity across Qwen3-1.7B / 8B / 14B on math, and Qwen2.5-7B on AlfWorld, WebShop, Search. Math runs land in 0.989–0.993; Qwen2.5-7B tasks reach ≥0.996.</figcaption>
@@ -1217,7 +1217,7 @@
       RL weight updates under bf16 are <b>bit-exactly sparse</b>: most parameters are unchanged from one iteration to the next. Sparsity is largely independent of model size and task — only learning rate moves it, and even at the most aggressive setting it stays above 0.97.
     </p>
     <p>
-      That collapses the per-iteration payload from a <b>~28 GB</b> full sync to <b>~1.5 GB</b> of delta bytes on Qwen3-14B. Most remote transfers complete in tens of seconds even at 4 Gbit/s + 300 ms RTT. The request-based delta-pull keeps slow links off the trainer's critical path.
+      That drops the per-iteration payload from a <b>~28 GB</b> full sync to <b>~1.5 GB</b> of delta bytes on Qwen3-14B. Most remote transfers complete in tens of seconds even at 4 Gbit/s + 300 ms RTT. The request-based delta-pull keeps slow links off the trainer's critical path.
     </p>
 
     <!-- Finding 5 -->
