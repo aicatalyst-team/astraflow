@@ -27,74 +27,55 @@ USER 1001
 
 WORKDIR /opt/app-root/src
 
-# --- Copy project first so the strip script can operate on pyproject.toml ---
-COPY --chown=1001:0 pyproject.toml ./
+# --- Copy the dependency-stripping script ---
+COPY --chown=1001:0 scripts/strip_gpu_deps.py /tmp/strip_gpu_deps.py
+
+# --- Copy project manifests and source ---
+COPY --chown=1001:0 pyproject.toml README.md ./
 COPY --chown=1001:0 astraflow/ ./astraflow/
 
-# --- Single consolidated build layer ---
-# 1. Strip GPU-only / problematic deps from pyproject.toml
-# 2. Install CPU-only PyTorch (separate pip call — --index-url replaces PyPI)
-# 3. Pre-install deps that need special handling
-# 4. Install the project
-# 5. Clean up pip cache
-# All in one RUN to minimise layer count and ephemeral storage
-RUN cat > /tmp/strip_deps.py << 'PYEOF'
-import re, pathlib
+# --- Strip GPU-only / problematic deps from pyproject.toml ---
+RUN python /tmp/strip_gpu_deps.py pyproject.toml
 
-p = pathlib.Path("pyproject.toml")
-txt = p.read_text()
-
-# Packages to strip: GPU-only, pre-installed separately, or problematic
-strip_pkgs = [
-    "torch==", "torchaudio", "torchvision", "torchdata",
-    "megatron-core", "mbridge", "torch_memory_saver",
-    "nvidia-ml-py", "mathruler", "swanboard", "swanlab",
-    "omegaconf", "hydra-core", "flash-attn", "transformer-engine",
-    "pyzmq", "h5py",
-    "qwen_agent", "openai-agents",
-    "ray", "redis",
-    "wandb", "tensorboardx",
-    "cookiecutter", "distro-info", "python-debian",
-    "numba", "ninja",
-    "math-verify",
-]
-
-for pkg in strip_pkgs:
-    pattern = r'^\s*"' + re.escape(pkg) + r'[^"]*",?\s*\n'
-    txt = re.sub(pattern, '', txt, flags=re.MULTILINE)
-
-p.write_text(txt)
-print("Stripped GPU/heavy/pre-installed deps from pyproject.toml")
-PYEOF
-python /tmp/strip_deps.py \
-    && pip install --no-cache-dir \
+# --- Install CPU-only PyTorch (separate pip call — --index-url replaces PyPI) ---
+RUN pip install --no-cache-dir \
         torch==2.8.0+cpu \
-        --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu
+
+# --- Install torchaudio / torchvision with CPU wheel index as fallback ---
+RUN pip install --no-cache-dir \
         torchaudio \
         torchvision \
-        --extra-index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir torchdata || true \
-    && pip install --no-cache-dir nvidia-ml-py || true \
-    && pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true \
-    && pip install --no-cache-dir mbridge==0.13.0 --no-deps || true \
-    && pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true \
-    && pip install --no-cache-dir mathruler==0.1.0 || true \
-    && pip install --no-cache-dir "swanboard==0.1.9b1" || true \
-    && pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true \
-    && pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" \
-       || pip install --no-cache-dir omegaconf hydra-core || true \
-    && pip install --no-cache-dir pyzmq h5py \
-    && pip install --no-cache-dir "math-verify==0.8.0" || true \
-    && pip install --no-cache-dir . 2>&1 \
-       || pip install --no-cache-dir --no-deps . 2>&1 \
-    && pip install --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cpu
+
+# --- Best-effort install of optional / GPU-adjacent packages ---
+RUN pip install --no-cache-dir torchdata || true
+RUN pip install --no-cache-dir nvidia-ml-py || true
+RUN pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true
+RUN pip install --no-cache-dir mbridge==0.13.0 --no-deps || true
+RUN pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true
+RUN pip install --no-cache-dir mathruler==0.1.0 || true
+RUN pip install --no-cache-dir "swanboard==0.1.9b1" || true
+RUN pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true
+RUN pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" \
+    || pip install --no-cache-dir omegaconf hydra-core || true
+RUN pip install --no-cache-dir pyzmq h5py || true
+RUN pip install --no-cache-dir "math-verify==0.8.0" || true
+
+# --- Install the project itself ---
+RUN pip install --no-cache-dir . 2>&1 \
+    || pip install --no-cache-dir --no-deps . 2>&1
+
+# --- Install runtime deps that the project may use but aren't in stripped list ---
+RUN pip install --no-cache-dir \
         flask \
         fastapi \
         uvicorn \
         uvloop \
-        tenacity \
-    && rm -rf /tmp/strip_deps.py /tmp/pip-* ~/.cache/pip
+        tenacity
+
+# --- Clean up ---
+RUN rm -f /tmp/strip_gpu_deps.py
 
 # --- Verify the installation ---
 RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
