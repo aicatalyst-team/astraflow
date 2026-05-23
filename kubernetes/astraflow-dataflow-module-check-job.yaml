@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: astraflow-dataflow-module-check
+  namespace: astraflow
+  labels:
+    app.kubernetes.io/name: astraflow
+    app.kubernetes.io/component: astraflow
+    app.kubernetes.io/managed-by: autopoc
+    autopoc.scenario: dataflow-module-check
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 60
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: astraflow
+        app.kubernetes.io/component: astraflow
+        autopoc.scenario: dataflow-module-check
+    spec:
+      containers:
+        - name: astraflow
+          image: quay.io/aicatalyst/astraflow-astraflow:latest
+          imagePullPolicy: Always
+          command: ["python"]
+          args: ["-c", "from astraflow import FILTER_REGISTRY, REPLAY_SELECTION_REGISTRY, get_filter, get_replay_selection; print('Filter registry:', FILTER_REGISTRY); print('Replay selection registry:', REPLAY_SELECTION_REGISTRY)"]
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      restartPolicy: Never
