@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------------
 # AstraFlow — UBI9 CPU-only PoC image (job / CLI)
-# Optimised for constrained OpenShift build pods
+# Slimmed down to avoid image-pull timeouts on constrained clusters
 # --------------------------------------------------------------------------
 FROM registry.access.redhat.com/ubi9/python-312
 
@@ -31,50 +31,36 @@ WORKDIR /opt/app-root/src
 COPY --chown=1001:0 scripts/strip_gpu_deps.py /tmp/strip_gpu_deps.py
 COPY --chown=1001:0 pyproject.toml README.md ./
 
-# --- Strip GPU-only / problematic deps, then install CPU-only PyTorch ---
-# Torch is installed separately because --index-url replaces PyPI entirely.
-# We use --no-cache-dir everywhere to limit disk/memory pressure.
+# --- Strip GPU-only / heavy deps, then install CPU-only PyTorch ---
+# Torch + torchdata are installed separately because --index-url replaces
+# PyPI entirely.  torchvision / torchaudio are NOT needed for PoC and are
+# stripped to cut ~1.5 GB from the image.
 RUN python /tmp/strip_gpu_deps.py pyproject.toml \
     && pip install --no-cache-dir \
         torch==2.8.0+cpu \
         --index-url https://download.pytorch.org/whl/cpu
 
-# --- Install torchvision/torchaudio with CPU extra-index ---
-RUN pip install --no-cache-dir \
-        torchaudio \
-        torchvision \
+# --- Install torchdata (CPU, from PyPI) ---
+RUN pip install --no-cache-dir torchdata \
         --extra-index-url https://download.pytorch.org/whl/cpu
 
-# --- Best-effort install of optional / GPU-adjacent packages ---
-# Each group is wrapped in `|| true` so a single failure won't abort the build.
-RUN (pip install --no-cache-dir torchdata || true) \
-    && (pip install --no-cache-dir nvidia-ml-py || true) \
-    && (pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true) \
+# --- Best-effort install of optional packages that may fail on CPU ---
+# Each group is wrapped in `|| true` so a single failure won't abort.
+# Kept minimal — only packages that code actually imports at top-level.
+RUN (pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true) \
     && (pip install --no-cache-dir mbridge==0.13.0 --no-deps || true) \
     && (pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true) \
-    && (pip install --no-cache-dir mathruler==0.1.0 || true) \
-    && (pip install --no-cache-dir "swanboard==0.1.9b1" || true) \
-    && (pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true) \
+    && (pip install --no-cache-dir nvidia-ml-py || true) \
     && (pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" \
         || pip install --no-cache-dir omegaconf hydra-core || true) \
-    && (pip install --no-cache-dir pyzmq h5py || true) \
-    && (pip install --no-cache-dir "math-verify==0.8.0" || true)
+    && rm -f /tmp/strip_gpu_deps.py
 
-# --- Copy application source ---
-COPY --chown=1001:0 astraflow/ ./astraflow/
+# --- Copy full application source ---
+COPY --chown=1001:0 . .
 
 # --- Install the project itself (fall back to --no-deps if hard deps fail) ---
 RUN pip install --no-cache-dir . 2>&1 \
     || pip install --no-cache-dir --no-deps . 2>&1
-
-# --- Install runtime extras that may not be in stripped pyproject.toml ---
-RUN pip install --no-cache-dir \
-        flask \
-        fastapi \
-        uvicorn \
-        uvloop \
-        tenacity \
-    && rm -f /tmp/strip_gpu_deps.py
 
 # --- Verify the installation ---
 RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
