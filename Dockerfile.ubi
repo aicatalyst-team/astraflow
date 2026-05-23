@@ -1,0 +1,93 @@
+# --------------------------------------------------------------------------
+# AstraFlow — UBI9 CPU-only PoC image (job / CLI)
+# --------------------------------------------------------------------------
+FROM registry.access.redhat.com/ubi9/python-312
+
+# Labels
+LABEL name="astraflow" \
+      summary="AstraFlow: Large-Scale Asynchronous RL System for Language Reasoning" \
+      description="CPU-only PoC build of AstraFlow training framework" \
+      io.k8s.display-name="astraflow" \
+      io.openshift.tags="python,ml,reinforcement-learning"
+
+# --- Install system build dependencies ---
+USER 0
+
+RUN dnf install -y \
+        gcc \
+        gcc-c++ \
+        cmake \
+        make \
+        git \
+        zeromq-devel \
+        openblas-devel \
+        hdf5-devel \
+        libffi-devel \
+        openssl-devel \
+        redhat-rpm-config \
+    && dnf clean all
+
+USER 1001
+
+WORKDIR /opt/app-root/src
+
+# --- Install CPU-only PyTorch first (separate line to avoid --index-url conflict) ---
+RUN pip install --no-cache-dir \
+        torch==2.8.0 \
+        torchaudio \
+        torchvision \
+        torchdata \
+        --extra-index-url https://download.pytorch.org/whl/cpu
+
+# --- Pre-install problematic / GPU-specific deps with graceful fallback ---
+# These packages may fail or pull GPU deps; install with best-effort.
+# nvidia-ml-py is a pure-python stub that works on CPU (just returns errors at runtime).
+RUN pip install --no-cache-dir nvidia-ml-py || true
+
+# megatron-core and mbridge may have hard CUDA deps — try with --no-deps first,
+# then install their pure-python requirements separately.
+RUN pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true
+RUN pip install --no-cache-dir mbridge==0.13.0 --no-deps || true
+RUN pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true
+
+# mathruler and swanboard/swanlab may come from non-standard indexes
+RUN pip install --no-cache-dir mathruler==0.1.0 || true
+RUN pip install --no-cache-dir "swanboard==0.1.9b1" || true
+RUN pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true
+
+# omegaconf and hydra dev versions
+RUN pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" || \
+    pip install --no-cache-dir omegaconf hydra-core || true
+
+# --- Copy project files ---
+COPY --chown=1001:0 pyproject.toml ./
+COPY --chown=1001:0 astraflow/ ./astraflow/
+
+# --- Install the project, skipping flash-attn and transformer-engine ---
+# We modify pyproject.toml in-place to remove GPU-only deps that would fail,
+# then install with remaining deps.
+RUN python -c " \
+import re, pathlib; \
+p = pathlib.Path('pyproject.toml'); \
+txt = p.read_text(); \
+# Remove torch/torchaudio/torchvision/torchdata (already installed) \
+for pkg in ['torch==', 'torchaudio', 'torchvision', 'torchdata', \
+            'megatron-core', 'mbridge', 'torch_memory_saver', \
+            'nvidia-ml-py', 'mathruler', 'swanboard', 'swanlab', \
+            'omegaconf', 'hydra-core', 'flash-attn', 'transformer-engine']: \
+    txt = re.sub(r'^\s*\"' + re.escape(pkg) + r'[^\"]*\",?\s*\n', '', txt, flags=re.MULTILINE); \
+p.write_text(txt)" \
+    && pip install --no-cache-dir . 2>&1 || \
+       pip install --no-cache-dir --no-deps . 2>&1
+
+# --- Verify the installation ---
+RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
+
+# --- OpenShift compatibility: group 0 permissions ---
+USER 0
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+USER 1001
+
+# --- Entrypoint for job / CLI ---
+ENTRYPOINT ["python"]
+CMD ["-c", "import astraflow; print(astraflow.__version__)"]
