@@ -11,9 +11,6 @@ LABEL name="astraflow" \
       io.openshift.tags="python,ml,reinforcement-learning"
 
 # --- Install system build dependencies ---
-# zeromq-devel and hdf5-devel are NOT available in UBI9 repos;
-# pyzmq and h5py ship binary wheels so they don't need the -devel headers.
-# openblas-devel is removed as numpy/scipy wheels bundle their own BLAS.
 USER 0
 
 RUN dnf install -y \
@@ -40,7 +37,7 @@ RUN pip install --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cpu
 
 # --- Pre-install problematic / GPU-specific deps with graceful fallback ---
-# nvidia-ml-py is a pure-python stub that works on CPU (just returns errors at runtime).
+# nvidia-ml-py is a pure-python stub that works on CPU.
 RUN pip install --no-cache-dir nvidia-ml-py || true
 
 # megatron-core and mbridge may have hard CUDA deps — try with --no-deps first,
@@ -65,22 +62,45 @@ RUN pip install --no-cache-dir pyzmq h5py
 COPY --chown=1001:0 pyproject.toml ./
 COPY --chown=1001:0 astraflow/ ./astraflow/
 
-# --- Install the project, skipping flash-attn and transformer-engine ---
-# We modify pyproject.toml in-place to remove GPU-only deps and already-installed
-# packages, then install with remaining deps.
-RUN python -c "\
-import re, pathlib; \
-p = pathlib.Path('pyproject.toml'); \
-txt = p.read_text(); \
-for pkg in ['torch==', 'torchaudio', 'torchvision', 'torchdata', \
-            'megatron-core', 'mbridge', 'torch_memory_saver', \
-            'nvidia-ml-py', 'mathruler', 'swanboard', 'swanlab', \
-            'omegaconf', 'hydra-core', 'flash-attn', 'transformer-engine', \
-            'pyzmq', 'h5py']: \
-    txt = re.sub(r'^\s*\"' + re.escape(pkg) + r'[^\"]*\",?\s*\n', '', txt, flags=re.MULTILINE); \
-p.write_text(txt)" \
-    && pip install --no-cache-dir . 2>&1 || \
-       pip install --no-cache-dir --no-deps . 2>&1
+# --- Create a helper script to strip GPU-only deps from pyproject.toml ---
+# This avoids the SyntaxError from trying to embed a for-loop in a
+# python -c one-liner.
+RUN cat > /tmp/strip_deps.py << 'PYEOF'
+import re, pathlib
+
+p = pathlib.Path("pyproject.toml")
+txt = p.read_text()
+
+# Packages to strip: already installed separately, GPU-only, or problematic
+strip_pkgs = [
+    "torch==", "torchaudio", "torchvision", "torchdata",
+    "megatron-core", "mbridge", "torch_memory_saver",
+    "nvidia-ml-py", "mathruler", "swanboard", "swanlab",
+    "omegaconf", "hydra-core", "flash-attn", "transformer-engine",
+    "pyzmq", "h5py",
+]
+
+for pkg in strip_pkgs:
+    pattern = r'^\s*"' + re.escape(pkg) + r'[^"]*",?\s*\n'
+    txt = re.sub(pattern, '', txt, flags=re.MULTILINE)
+
+p.write_text(txt)
+print("Stripped GPU/pre-installed deps from pyproject.toml")
+PYEOF
+python /tmp/strip_deps.py
+
+# --- Install the project with remaining deps ---
+RUN pip install --no-cache-dir . 2>&1 || \
+    pip install --no-cache-dir --no-deps . 2>&1
+
+# --- Ensure flask and other critical runtime deps are installed ---
+# flask is required at import time by astraflow.dataflow.service
+RUN pip install --no-cache-dir \
+        flask \
+        fastapi \
+        uvicorn \
+        uvloop \
+        tenacity
 
 # --- Verify the installation ---
 RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
