@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: astraflow
     app.kubernetes.io/component: astraflow
     app.kubernetes.io/managed-by: autopoc
-    autopoc.scenario: core-classes-accessible
+    scenario: core-classes-accessible
 spec:
   backoffLimit: 1
   activeDeadlineSeconds: 60
@@ -16,7 +16,7 @@ spec:
       labels:
         app.kubernetes.io/name: astraflow
         app.kubernetes.io/component: astraflow
-        autopoc.scenario: core-classes-accessible
+        scenario: core-classes-accessible
     spec:
       containers:
         - name: astraflow
