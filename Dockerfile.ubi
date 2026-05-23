@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------------
 # AstraFlow — UBI9 CPU-only PoC image (job / CLI)
-# Optimised for constrained OpenShift build pods (reduced layers & footprint)
+# Optimised for constrained OpenShift build pods
 # --------------------------------------------------------------------------
 FROM registry.access.redhat.com/ubi9/python-312
 
@@ -10,7 +10,7 @@ LABEL name="astraflow" \
       io.k8s.display-name="astraflow" \
       io.openshift.tags="python,ml,reinforcement-learning"
 
-# --- System build dependencies ---
+# --- System build dependencies (single layer, as root) ---
 USER 0
 RUN dnf install -y \
         gcc \
@@ -27,23 +27,27 @@ USER 1001
 
 WORKDIR /opt/app-root/src
 
-# --- Copy the dependency-stripping script, project manifests, and source ---
+# --- Copy the dep-stripping helper and project metadata first (cache friendly) ---
 COPY --chown=1001:0 scripts/strip_gpu_deps.py /tmp/strip_gpu_deps.py
 COPY --chown=1001:0 pyproject.toml README.md ./
-COPY --chown=1001:0 astraflow/ ./astraflow/
 
-# --- Strip GPU-only / problematic deps and install CPU-only PyTorch ---
+# --- Strip GPU-only / problematic deps, then install CPU-only PyTorch ---
+# Torch is installed separately because --index-url replaces PyPI entirely.
+# We use --no-cache-dir everywhere to limit disk/memory pressure.
 RUN python /tmp/strip_gpu_deps.py pyproject.toml \
     && pip install --no-cache-dir \
         torch==2.8.0+cpu \
-        --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu
+
+# --- Install torchvision/torchaudio with CPU extra-index ---
+RUN pip install --no-cache-dir \
         torchaudio \
         torchvision \
         --extra-index-url https://download.pytorch.org/whl/cpu
 
-# --- Best-effort install of optional / GPU-adjacent packages (single layer) ---
-RUN pip install --no-cache-dir torchdata || true \
+# --- Best-effort install of optional / GPU-adjacent packages ---
+# Each group is wrapped in `|| true` so a single failure won't abort the build.
+RUN (pip install --no-cache-dir torchdata || true) \
     && (pip install --no-cache-dir nvidia-ml-py || true) \
     && (pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true) \
     && (pip install --no-cache-dir mbridge==0.13.0 --no-deps || true) \
@@ -56,9 +60,14 @@ RUN pip install --no-cache-dir torchdata || true \
     && (pip install --no-cache-dir pyzmq h5py || true) \
     && (pip install --no-cache-dir "math-verify==0.8.0" || true)
 
-# --- Install the project itself + runtime extras ---
+# --- Copy application source ---
+COPY --chown=1001:0 astraflow/ ./astraflow/
+
+# --- Install the project itself (fall back to --no-deps if hard deps fail) ---
 RUN pip install --no-cache-dir . 2>&1 \
     || pip install --no-cache-dir --no-deps . 2>&1
+
+# --- Install runtime extras that may not be in stripped pyproject.toml ---
 RUN pip install --no-cache-dir \
         flask \
         fastapi \
@@ -71,14 +80,13 @@ RUN pip install --no-cache-dir \
 RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
 
 # --- OpenShift compatibility: group 0 permissions ---
-# Only target /opt/app-root/src (application code) and /opt/app-root/etc.
-# Avoid recursing into /opt/app-root/lib which contains multi-GB Python packages
-# whose ownership is already correct (installed by UID 1001).
+# Scope to application dirs only — avoid recursing into /opt/app-root/lib
+# which contains multi-GB Python packages already owned by UID 1001.
 USER 0
 RUN chgrp -R 0 /opt/app-root/src /opt/app-root/bin \
     && chmod -R g=u /opt/app-root/src /opt/app-root/bin
 USER 1001
 
-# --- Entrypoint for job / CLI ---
+# --- Job / CLI entrypoint (no EXPOSE — this is not a server) ---
 ENTRYPOINT ["python"]
 CMD ["-c", "import astraflow; print(astraflow.__version__)"]
