@@ -1,18 +1,17 @@
 # --------------------------------------------------------------------------
 # AstraFlow — UBI9 CPU-only PoC image (job / CLI)
+# Optimised for constrained OpenShift build pods (reduced layers & footprint)
 # --------------------------------------------------------------------------
 FROM registry.access.redhat.com/ubi9/python-312
 
-# Labels
 LABEL name="astraflow" \
       summary="AstraFlow: Large-Scale Asynchronous RL System for Language Reasoning" \
       description="CPU-only PoC build of AstraFlow training framework" \
       io.k8s.display-name="astraflow" \
       io.openshift.tags="python,ml,reinforcement-learning"
 
-# --- Install system build dependencies ---
+# --- System build dependencies (single layer) ---
 USER 0
-
 RUN dnf install -y \
         gcc \
         gcc-c++ \
@@ -22,62 +21,42 @@ RUN dnf install -y \
         libffi-devel \
         openssl-devel \
         redhat-rpm-config \
-    && dnf clean all
-
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 USER 1001
 
 WORKDIR /opt/app-root/src
 
-# --- Install CPU-only PyTorch first (separate line to avoid --index-url conflict) ---
-RUN pip install --no-cache-dir \
-        torch==2.8.0 \
-        torchaudio \
-        torchvision \
-        torchdata \
-        --extra-index-url https://download.pytorch.org/whl/cpu
-
-# --- Pre-install problematic / GPU-specific deps with graceful fallback ---
-# nvidia-ml-py is a pure-python stub that works on CPU.
-RUN pip install --no-cache-dir nvidia-ml-py || true
-
-# megatron-core and mbridge may have hard CUDA deps — try with --no-deps first,
-# then install their pure-python requirements separately.
-RUN pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true
-RUN pip install --no-cache-dir mbridge==0.13.0 --no-deps || true
-RUN pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true
-
-# mathruler and swanboard/swanlab may come from non-standard indexes
-RUN pip install --no-cache-dir mathruler==0.1.0 || true
-RUN pip install --no-cache-dir "swanboard==0.1.9b1" || true
-RUN pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true
-
-# omegaconf and hydra dev versions
-RUN pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" || \
-    pip install --no-cache-dir omegaconf hydra-core || true
-
-# Pre-install pyzmq and h5py from wheels (no system -devel headers needed)
-RUN pip install --no-cache-dir pyzmq h5py
-
-# --- Copy project files ---
+# --- Copy project first so the strip script can operate on pyproject.toml ---
 COPY --chown=1001:0 pyproject.toml ./
 COPY --chown=1001:0 astraflow/ ./astraflow/
 
-# --- Create a helper script to strip GPU-only deps from pyproject.toml ---
-# This avoids the SyntaxError from trying to embed a for-loop in a
-# python -c one-liner.
+# --- Single consolidated build layer ---
+# 1. Strip GPU-only / problematic deps from pyproject.toml
+# 2. Install CPU-only PyTorch (separate pip call — --index-url replaces PyPI)
+# 3. Pre-install deps that need special handling
+# 4. Install the project
+# 5. Clean up pip cache
+# All in one RUN to minimise layer count and ephemeral storage
 RUN cat > /tmp/strip_deps.py << 'PYEOF'
 import re, pathlib
 
 p = pathlib.Path("pyproject.toml")
 txt = p.read_text()
 
-# Packages to strip: already installed separately, GPU-only, or problematic
+# Packages to strip: GPU-only, pre-installed separately, or problematic
 strip_pkgs = [
     "torch==", "torchaudio", "torchvision", "torchdata",
     "megatron-core", "mbridge", "torch_memory_saver",
     "nvidia-ml-py", "mathruler", "swanboard", "swanlab",
     "omegaconf", "hydra-core", "flash-attn", "transformer-engine",
     "pyzmq", "h5py",
+    "qwen_agent", "openai-agents",
+    "ray", "redis",
+    "wandb", "tensorboardx",
+    "cookiecutter", "distro-info", "python-debian",
+    "numba", "ninja",
+    "math-verify",
 ]
 
 for pkg in strip_pkgs:
@@ -85,22 +64,37 @@ for pkg in strip_pkgs:
     txt = re.sub(pattern, '', txt, flags=re.MULTILINE)
 
 p.write_text(txt)
-print("Stripped GPU/pre-installed deps from pyproject.toml")
+print("Stripped GPU/heavy/pre-installed deps from pyproject.toml")
 PYEOF
-python /tmp/strip_deps.py
-
-# --- Install the project with remaining deps ---
-RUN pip install --no-cache-dir . 2>&1 || \
-    pip install --no-cache-dir --no-deps . 2>&1
-
-# --- Ensure flask and other critical runtime deps are installed ---
-# flask is required at import time by astraflow.dataflow.service
-RUN pip install --no-cache-dir \
+python /tmp/strip_deps.py \
+    && pip install --no-cache-dir \
+        torch==2.8.0+cpu \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir \
+        torchaudio \
+        torchvision \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir torchdata || true \
+    && pip install --no-cache-dir nvidia-ml-py || true \
+    && pip install --no-cache-dir megatron-core==0.13.1 --no-deps || true \
+    && pip install --no-cache-dir mbridge==0.13.0 --no-deps || true \
+    && pip install --no-cache-dir torch_memory_saver==0.0.9 --no-deps || true \
+    && pip install --no-cache-dir mathruler==0.1.0 || true \
+    && pip install --no-cache-dir "swanboard==0.1.9b1" || true \
+    && pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true \
+    && pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" \
+       || pip install --no-cache-dir omegaconf hydra-core || true \
+    && pip install --no-cache-dir pyzmq h5py \
+    && pip install --no-cache-dir "math-verify==0.8.0" || true \
+    && pip install --no-cache-dir . 2>&1 \
+       || pip install --no-cache-dir --no-deps . 2>&1 \
+    && pip install --no-cache-dir \
         flask \
         fastapi \
         uvicorn \
         uvloop \
-        tenacity
+        tenacity \
+    && rm -rf /tmp/strip_deps.py /tmp/pip-* ~/.cache/pip
 
 # --- Verify the installation ---
 RUN python -c "import astraflow; print('astraflow version:', astraflow.__version__)"
