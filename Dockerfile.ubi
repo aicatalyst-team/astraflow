@@ -11,6 +11,9 @@ LABEL name="astraflow" \
       io.openshift.tags="python,ml,reinforcement-learning"
 
 # --- Install system build dependencies ---
+# zeromq-devel and hdf5-devel are NOT available in UBI9 repos;
+# pyzmq and h5py ship binary wheels so they don't need the -devel headers.
+# openblas-devel is removed as numpy/scipy wheels bundle their own BLAS.
 USER 0
 
 RUN dnf install -y \
@@ -19,9 +22,6 @@ RUN dnf install -y \
         cmake \
         make \
         git \
-        zeromq-devel \
-        openblas-devel \
-        hdf5-devel \
         libffi-devel \
         openssl-devel \
         redhat-rpm-config \
@@ -40,7 +40,6 @@ RUN pip install --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cpu
 
 # --- Pre-install problematic / GPU-specific deps with graceful fallback ---
-# These packages may fail or pull GPU deps; install with best-effort.
 # nvidia-ml-py is a pure-python stub that works on CPU (just returns errors at runtime).
 RUN pip install --no-cache-dir nvidia-ml-py || true
 
@@ -59,22 +58,25 @@ RUN pip install --no-cache-dir "swanlab[dashboard]==0.6.12" || true
 RUN pip install --no-cache-dir "omegaconf==2.4.0.dev2" "hydra-core==1.4.0.dev1" || \
     pip install --no-cache-dir omegaconf hydra-core || true
 
+# Pre-install pyzmq and h5py from wheels (no system -devel headers needed)
+RUN pip install --no-cache-dir pyzmq h5py
+
 # --- Copy project files ---
 COPY --chown=1001:0 pyproject.toml ./
 COPY --chown=1001:0 astraflow/ ./astraflow/
 
 # --- Install the project, skipping flash-attn and transformer-engine ---
-# We modify pyproject.toml in-place to remove GPU-only deps that would fail,
-# then install with remaining deps.
-RUN python -c " \
+# We modify pyproject.toml in-place to remove GPU-only deps and already-installed
+# packages, then install with remaining deps.
+RUN python -c "\
 import re, pathlib; \
 p = pathlib.Path('pyproject.toml'); \
 txt = p.read_text(); \
-# Remove torch/torchaudio/torchvision/torchdata (already installed) \
 for pkg in ['torch==', 'torchaudio', 'torchvision', 'torchdata', \
             'megatron-core', 'mbridge', 'torch_memory_saver', \
             'nvidia-ml-py', 'mathruler', 'swanboard', 'swanlab', \
-            'omegaconf', 'hydra-core', 'flash-attn', 'transformer-engine']: \
+            'omegaconf', 'hydra-core', 'flash-attn', 'transformer-engine', \
+            'pyzmq', 'h5py']: \
     txt = re.sub(r'^\s*\"' + re.escape(pkg) + r'[^\"]*\",?\s*\n', '', txt, flags=re.MULTILINE); \
 p.write_text(txt)" \
     && pip install --no-cache-dir . 2>&1 || \
